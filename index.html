@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ဝင်ငွေ/ထွက်ငွေ စာရင်း - Personal Finance Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Padauk & Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        },
+                        danger: {
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Padauk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Padauk', sans-serif;
+            background-color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-emerald-500 rounded-xl text-white">
+                    <i class="fa-solid font-bold fa-wallet text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">ဝင်ငွေ/ထွက်ငွေ စာရင်း</h1>
+                    <p class="text-xs text-slate-400">Personal Finance & Budget Manager</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="exportToCSV()" class="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-medium py-2 px-3 sm:px-4 rounded-lg transition duration-200 shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span class="hidden sm:inline">Excel/CSV ထုတ်ယူရန်</span>
+                    <span class="sm:hidden">Export</span>
+                </button>
+                <button onclick="resetDataPrompt()" class="flex items-center space-x-1 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white text-xs sm:text-sm font-medium py-2 px-3 rounded-lg transition duration-200" title="စာရင်းအားလုံး ပြန်ဖျက်ရန်">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Today Expense -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm border-l-4 border-amber-500 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">ယနေ့ ထွက်ငွေ (Today)</span>
+                    <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-day text-sm"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-slate-800" id="kpiTodayExpense">0 ကျပ်</div>
+                <div class="text-xs text-slate-400 mt-1" id="kpiTodayDate">-</div>
+            </div>
+
+            <!-- Current Month Expense -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm border-l-4 border-rose-500 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">ဒီလ ထွက်ငွေ (This Month)</span>
+                    <div class="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-week text-sm"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-slate-800" id="kpiMonthExpense">0 ကျပ်</div>
+                <div class="text-xs text-slate-400 mt-1" id="kpiMonthName">-</div>
+            </div>
+
+            <!-- Current Year Expense -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm border-l-4 border-purple-500 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">ဒီနှစ် ထွက်ငွေ (This Year)</span>
+                    <div class="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <i class="fa-solid fa-calendar text-sm"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-slate-800" id="kpiYearExpense">0 ကျပ်</div>
+                <div class="text-xs text-slate-400 mt-1" id="kpiYearName">-</div>
+            </div>
+
+            <!-- Total Net Balance -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm border-l-4 border-emerald-500 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">လက်ကျန်ငွေ (Net Balance)</span>
+                    <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <i class="fa-solid fa-scale-balanced text-sm"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-emerald-600" id="kpiNetBalance">0 ကျပ်</div>
+                <div class="text-xs text-slate-500 mt-1">
+                    ဝင်ငွေ: <span id="kpiTotalIncome" class="text-emerald-700 font-semibold">0</span> | ထွက်ငွေ: <span id="kpiTotalExpense" class="text-rose-600 font-semibold">0</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+            <!-- Input Form Card -->
+            <div class="lg:col-span-1 glass-card rounded-2xl p-6 shadow-sm border border-slate-200/80">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-emerald-600"></i>
+                    စာရင်းသစ် ထည့်သွင်းရန်
+                </h2>
+                
+                <form id="transactionForm" onsubmit="handleAddTransaction(event)" class="space-y-4">
+                    <!-- Date Input -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ရက်စွဲ (Date)</label>
+                        <input type="date" id="inputDate" required class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                    </div>
+
+                    <!-- Type Selector (Income / Expense) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">အမျိုးအစား (Type)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="inputType" value="Expense" checked class="peer sr-only" onchange="updateCategories()">
+                                <div class="p-2.5 text-center text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-600 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition">
+                                    <i class="fa-solid fa-arrow-down-long mr-1"></i> ထွက်ငွေ
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="inputType" value="Income" class="peer sr-only" onchange="updateCategories()">
+                                <div class="p-2.5 text-center text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-600 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition">
+                                    <i class="fa-solid fa-arrow-up-long mr-1"></i> ဝင်ငွေ
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Category Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ခေါင်းစဉ် (Category)</label>
+                        <select id="inputCategory" required class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                    </div>
+
+                    <!-- Amount Input -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">ပမာဏ / ကျပ် (Amount in MMK)</label>
+                        <div class="relative">
+                            <input type="number" id="inputAmount" min="1" step="any" placeholder="0" required class="w-full pl-3 pr-12 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-semibold text-slate-800">
+                            <span class="absolute right-3 top-2.5 text-xs font-semibold text-slate-400">ကျပ်</span>
+                        </div>
+                    </div>
+
+                    <!-- Description/Note Input -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">မှတ်ချက် (Note / Description)</label>
+                        <input type="text" id="inputNote" placeholder="ဥပမာ - မနက်စာ သောက်တာ" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>စာရင်းသိမ်းဆည်းမည်</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Charts Container -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Bar Chart: Monthly Trends -->
+                <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-indigo-600"></i>
+                            လအလိုက် ဝင်ငွေနှင့် ထွက်ငွေ နှိုင်းယှဥ်ချက် (Monthly Overview)
+                        </h3>
+                    </div>
+                    <div class="relative h-60 w-full">
+                        <canvas id="barChartTrends"></canvas>
+                    </div>
+                </div>
+
+                <!-- Doughnut Chart: Expense Breakdown -->
+                <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-rose-500"></i>
+                            အသုံးစရိတ် အမျိုးအစားအလိုက် ခွဲခြားမှု (Expense Category Breakdown)
+                        </h3>
+                    </div>
+                    <div class="relative h-60 w-full flex items-center justify-center">
+                        <canvas id="pieChartCategories"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="glass-card rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden mb-8">
+            <!-- Table Header & Filters -->
+            <div class="p-5 border-b border-slate-100 bg-white/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-slate-600"></i>
+                        မှတ်တမ်းဇယား (Transaction Records)
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5" id="recordCountText">စုစုပေါင်း (0) ခု</p>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Type Filter -->
+                    <select id="filterType" onchange="renderTransactions()" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="ALL">အမျိုးအစား အားလုံး</option>
+                        <option value="Income">ဝင်ငွေ</option>
+                        <option value="Expense">ထွက်ငွေ</option>
+                    </select>
+
+                    <!-- Category Filter -->
+                    <select id="filterCategory" onchange="renderTransactions()" class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="ALL">ခေါင်းစဉ် အားလုံး</option>
+                    </select>
+
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="searchKeyword" onkeyup="renderTransactions()" placeholder="ရှာဖွေရန်..." class="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36 sm:w-48">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Area -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-500 uppercase text-[11px] font-semibold tracking-wider border-b border-slate-200/60">
+                            <th class="py-3 px-4">ရက်စွဲ</th>
+                            <th class="py-3 px-4">အမျိုးအစား</th>
+                            <th class="py-3 px-4">ခေါင်းစဉ်</th>
+                            <th class="py-3 px-4">မှတ်ချက်</th>
+                            <th class="py-3 px-4 text-right">ပမာဏ</th>
+                            <th class="py-3 px-4 text-center">လုပ်ဆောင်ချက်</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm text-slate-700">
+                        <!-- Data rows added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Placeholder -->
+            <div id="emptyState" class="hidden p-8 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-folder-open text-xl"></i>
+                </div>
+                <p class="text-sm font-medium text-slate-600">မည်သည့် မှတ်တမ်းမျှ မရှိသေးပါ</p>
+                <p class="text-xs text-slate-400 mt-1">စာရင်းသစ် ထည့်သွင်းပါ သို့မဟုတ် ရှာဖွေမှု အကန့်အသတ်များကို ပြန်ပြင်ပါ။</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
+        <p>© 2026 Personal Expense Tracker & Finance Planner. Data saved locally in browser.</p>
+    </footer>
+
+    <script>
+        // Default Category Lists
+        const EXPENSE_CATEGORIES = ["အစားအသောက်", "သွားလာရေး", "အိမ်စရိတ်", "မီးဖိုး/ရေဖိုး", "ဈေးဝယ်ခြင်း", "ဖျော်ဖြေရေး", "ကျန်းမာရေး", "အထွေထွေ"];
+        const INCOME_CATEGORIES = ["လစာ", "စီးပွားရေး", "ရင်းနှီးမြှုပ်နှံမှု", "အလွတ်သဘော", "လက်ဆောင်", "အခြားဝင်ငွေ"];
+
+        // Initial Seed Sample Data (Pre-loaded if localStorage is empty)
+        const SAMPLE_TRANSACTIONS = [
+            { id: '1', date: '2026-10-01', type: 'Income', category: 'လစာ', amount: 850000, note: 'အောက်တိုဘာလစာ' },
+            { id: '2', date: '2026-10-01', type: 'Expense', category: 'အိမ်စရိတ်', amount: 150000, note: 'အိမ်ငှားခ' },
+            { id: '3', date: '2026-10-02', type: 'Expense', category: 'အစားအသောက်', amount: 12000, note: 'မနက်စာနှင့် ကော်ဖီ' },
+            { id: '4', date: '2026-10-02', type: 'Expense', category: 'သွားလာရေး', amount: 5000, note: 'ကားဂိတ်/ဂက်စ်ဖိုး' },
+            { id: '5', date: '2026-09-15', type: 'Expense', category: 'မီးဖိုး/ရေဖိုး', amount: 35000, note: 'စက်တင်ဘာ မီးဘေလ်' },
+            { id: '6', date: '2026-09-01', type: 'Income', category: 'လစာ', amount: 850000, note: 'စက်တင်ဘာလစာ' }
+        ];
+
+        // State variables
+        let transactions = [];
+        let barChart = null;
+        let pieChart = null;
+
+        // On Page Load Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set Default Input Date to Today
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('inputDate').value = todayStr;
+
+            // Load Data from LocalStorage or Seed Data
+            loadTransactions();
+
+            // Populate Form Categories
+            updateCategories();
+            populateFilterCategories();
+
+            // Render Charts and Table
+            renderAll();
+        });
+
+        function loadTransactions() {
+            const saved = localStorage.getItem('myanmar_finance_data');
+            if (saved) {
+                try {
+                    transactions = JSON.parse(saved);
+                } catch (e) {
+                    transactions = [...SAMPLE_TRANSACTIONS];
+                }
+            } else {
+                transactions = [...SAMPLE_TRANSACTIONS];
+                saveTransactions();
+            }
+        }
+
+        function saveTransactions() {
+            localStorage.setItem('myanmar_finance_data', JSON.stringify(transactions));
+        }
+
+        function handleAddTransaction(e) {
+            e.preventDefault();
+
+            const date = document.getElementById('inputDate').value;
+            const type = document.querySelector('input[name="inputType"]:checked').value;
+            const category = document.getElementById('inputCategory').value;
+            const amount = parseFloat(document.getElementById('inputAmount').value);
+            const note = document.getElementById('inputNote').value.trim();
+
+            if (!date || !category || isNaN(amount) || amount <= 0) {
+                alert('ကျေးဇူးပြု၍ အချက်အလက်များကို မှန်ကန်စွာ ဖြည့်သွင်းပေးပါ။');
+                return;
+            }
+
+            const newTx = {
+                id: Date.now().toString(),
+                date,
+                type,
+                category,
+                amount,
+                note: note || '-'
+            };
+
+            transactions.unshift(newTx);
+            saveTransactions();
+
+            // Reset Form fields except date
+            document.getElementById('inputAmount').value = '';
+            document.getElementById('inputNote').value = '';
+
+            renderAll();
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('ဒီမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveTransactions();
+                renderAll();
+            }
+        }
+
+        function resetDataPrompt() {
+            if (confirm('မှတ်တမ်းအားလုံးကို ဖျက်ပြီး မူလအခြေအနေသို့ ပြန်လည်စတင်မှာ သေချာပါသလား?')) {
+                localStorage.removeItem('myanmar_finance_data');
+                transactions = [...SAMPLE_TRANSACTIONS];
+                saveTransactions();
+                renderAll();
+            }
+        }
+
+        function updateCategories() {
+            const type = document.querySelector('input[name="inputType"]:checked').value;
+            const categorySelect = document.getElementById('inputCategory');
+            categorySelect.innerHTML = '';
+
+            const categories = type === 'Expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                categorySelect.appendChild(opt);
+            });
+        }
+
+        function populateFilterCategories() {
+            const filterCategory = document.getElementById('filterCategory');
+            filterCategory.innerHTML = '<option value="ALL">ခေါင်းစဉ် အားလုံး</option>';
+
+            const allCategories = [...new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES])];
+            allCategories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                filterCategory.appendChild(opt);
+            });
+        }
+
+        function formatMMK(amount) {
+            return new Intl.NumberFormat('my-MM').format(amount) + ' ကျပ်';
+        }
+
+        function renderAll() {
+            renderKPIs();
+            renderTransactions();
+            renderCharts();
+        }
+
+        function renderKPIs() {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentMonthStr = todayStr.substring(0, 7); // YYYY-MM
+            const currentYearStr = todayStr.substring(0, 4);  // YYYY
+
+            let todayExp = 0;
+            let monthExp = 0;
+            let yearExp = 0;
+            let totalInc = 0;
+            let totalExp = 0;
+
+            transactions.forEach(t => {
+                const amt = Number(t.amount);
+                if (t.type === 'Income') {
+                    totalInc += amt;
+                } else {
+                    totalExp += amt;
+                    if (t.date === todayStr) todayExp += amt;
+                    if (t.date.startsWith(currentMonthStr)) monthExp += amt;
+                    if (t.date.startsWith(currentYearStr)) yearExp += amt;
+                }
+            });
+
+            document.getElementById('kpiTodayExpense').textContent = formatMMK(todayExp);
+            document.getElementById('kpiTodayDate').textContent = todayStr;
+
+            document.getElementById('kpiMonthExpense').textContent = formatMMK(monthExp);
+            document.getElementById('kpiMonthName').textContent = `${currentMonthStr} လအထိ`;
+
+            document.getElementById('kpiYearExpense').textContent = formatMMK(yearExp);
+            document.getElementById('kpiYearName').textContent = `${currentYearStr} ခုနှစ်`;
+
+            const netBalance = totalInc - totalExp;
+            const netElem = document.getElementById('kpiNetBalance');
+            netElem.textContent = formatMMK(netBalance);
+            netElem.className = `text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            document.getElementById('kpiTotalIncome').textContent = formatMMK(totalInc);
+            document.getElementById('kpiTotalExpense').textContent = formatMMK(totalExp);
+        }
+
+        function renderTransactions() {
+            const tableBody = document.getElementById('transactionTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const recordCountText = document.getElementById('recordCountText');
+
+            const filterType = document.getElementById('filterType').value;
+            const filterCat = document.getElementById('filterCategory').value;
+            const searchKw = document.getElementById('searchKeyword').value.toLowerCase();
+
+            // Filter transactions
+            const filtered = transactions.filter(t => {
+                const matchType = (filterType === 'ALL' || t.type === filterType);
+                const matchCat = (filterCat === 'ALL' || t.category === filterCat);
+                const matchSearch = (t.note.toLowerCase().includes(searchKw) || t.category.toLowerCase().includes(searchKw));
+                return matchType && matchCat && matchSearch;
+            });
+
+            recordCountText.textContent = `စုစုပေါင်း (${filtered.length}) ခု`;
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tableBody.innerHTML = filtered.map(t => {
+                const isIncome = t.type === 'Income';
+                const badgeBg = isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800';
+                const amountColor = isIncome ? 'text-emerald-600' : 'text-rose-600';
+                const amountPrefix = isIncome ? '+' : '-';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3 px-4 font-mono text-xs text-slate-500">${t.date}</td>
+                        <td class="py-3 px-4">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${badgeBg}">
+                                ${isIncome ? 'ဝင်ငွေ' : 'ထွက်ငွေ'}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-800">${t.category}</td>
+                        <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${t.note}</td>
+                        <td class="py-3 px-4 text-right font-semibold ${amountColor}">
+                            ${amountPrefix} ${formatMMK(t.amount)}
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteTransaction('${t.id}')" class="text-slate-400 hover:text-rose-600 p-1 rounded transition" title="ဖျက်ပါ">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCharts() {
+            renderBarChart();
+            renderPieChart();
+        }
+
+        function renderBarChart() {
+            const ctx = document.getElementById('barChartTrends').getContext('2d');
+
+            // Calculate aggregated monthly totals
+            const monthlyData = {};
+            transactions.forEach(t => {
+                const monthKey = t.date.substring(0, 7); // YYYY-MM
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { income: 0, expense: 0 };
+                }
+                if (t.type === 'Income') {
+                    monthlyData[monthKey].income += Number(t.amount);
+                } else {
+                    monthlyData[monthKey].expense += Number(t.amount);
+                }
+            });
+
+            // Sort months chronologically
+            const sortedMonths = Object.keys(monthlyData).sort();
+            const incomeValues = sortedMonths.map(m => monthlyData[m].income);
+            const expenseValues = sortedMonths.map(m => monthlyData[m].expense);
+
+            if (barChart) barChart.destroy();
+
+            barChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedMonths,
+                    datasets: [
+                        {
+                            label: 'ဝင်ငွေ (Income)',
+                            data: incomeValues,
+                            backgroundColor: '#22c55e',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'ထွက်ငွေ (Expense)',
+                            data: expenseValues,
+                            backgroundColor: '#ef4444',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Padauk, sans-serif' } } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => value >= 1000 ? (value / 1000) + 'k' : value
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderPieChart() {
+            const ctx = document.getElementById('pieChartCategories').getContext('2d');
+
+            // Expense totals grouped by category
+            const categoryData = {};
+            transactions.filter(t => t.type === 'Expense').forEach(t => {
+                categoryData[t.category] = (categoryData[t.category] || 0) + Number(t.amount);
+            });
+
+            const labels = Object.keys(categoryData);
+            const values = Object.values(categoryData);
+
+            if (pieChart) pieChart.destroy();
+
+            const chartColors = ['#f43f5e', '#3b82f6', '#eab308', '#a855f7', '#14b8a6', '#f97316', '#64748b', '#84cc16'];
+
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: chartColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { family: 'Padauk, sans-serif', size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function exportToCSV() {
+            if (transactions.length === 0) {
+                alert('ထုတ်ယူရန် စာရင်းမှတ်တမ်းများ မရှိသေးပါ။');
+                return;
+            }
+
+            // UTF-8 BOM for Burmese language compatibility in Excel
+            let csvContent = "\uFEFF";
+            csvContent += "ID,Date,Type,Category,Amount (MMK),Note\n";
+
+            transactions.forEach(t => {
+                const cleanNote = `"${t.note.replace(/"/g, '""')}"`;
+                csvContent += `${t.id},${t.date},${t.type},${t.category},${t.amount},${cleanNote}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Finance_Report_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
